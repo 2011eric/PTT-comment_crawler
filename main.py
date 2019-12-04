@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
 from argparse import ArgumentParser
+import sys,io
+sys.stdout=io.TextIOWrapper(sys.stdout.buffer,encoding='utf8')
 
 def process_command():
     parser = ArgumentParser()
@@ -20,7 +22,7 @@ class Crawler:
     }
     comment_data = {}
     home = "https://www.ptt.cc/"
-    
+
     def __init__(self,start,board,num):
         self.session = requests.session()
         requests.packages.urllib3.disable_warnings()
@@ -36,14 +38,17 @@ class Crawler:
 
     def get_articles(self):
         link = "https://www.ptt.cc/bbs/{board}/index{start}.html".format(board = self.board , start = self.index )
+        
         html = self.session.get(link).text
         soup = BeautifulSoup(html,"lxml")
         div = soup.find_all("div",class_ = "r-ent")
+    
         for item in div:
             try:
                 title = item.find("div",class_ = "title").text.strip()
                 href = item.find("div",class_ = "title").a['href']
                 self.articles[title]=self.home+href
+                print(title,href)
             except:
                 print("error loding link")
 
@@ -59,4 +64,3 @@ args = process_command()
 crawler = Crawler(args.start, args.board,args.num )
 crawler.crawl()
 
-#for i in range(self.num):
