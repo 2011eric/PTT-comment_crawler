@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 from argparse import ArgumentParser
+import json
 import requests
-import sys,io
+import sys,io,os
 sys.stdout=io.TextIOWrapper(sys.stdout.buffer,encoding='utf8')
 
 def process_command():
@@ -98,7 +99,6 @@ class Crawler:
                         result["content"] = tag.strip()
                 result["author"] = soup.find_all("span",class_ ="article-meta-value" )[0].text
                 result["date"]  = soup.find_all("span",class_ ="article-meta-value" )[-1].text
-                print(result)
                
                 for element in soup.find_all("div",class_ = "push"):
                     try:
@@ -120,7 +120,7 @@ class Crawler:
                             "ip":ip,
                             "datetime":datetime}
                     )                        
-                    self.article_data.append(result)               
+                self.article_data.append(result)                   
             except:
                 print("error loding article")
             
@@ -137,3 +137,19 @@ crawler = Crawler(args.start, args.board, args.num)
 crawler.crawl()
 print(crawler.article_data)
 
+output_json = json.dumps(crawler.article_data)
+file_name = crawler.board+".json"
+if os.path.isfile(file_name):
+    print("exist")
+    fp = open(file_name,"r")
+    json_original = fp.read()
+    fp.close()
+  
+    output = json_original.strip()[:-1]+","
+    output += output_json[1:]
+    fp = open(file_name,"w")
+    fp.write(output)
+    
+else:
+    fp = open(file_name,"w")
+    fp.write(output_json)
