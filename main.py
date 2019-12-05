@@ -1,14 +1,18 @@
 from bs4 import BeautifulSoup
-import requests
+from bs4.element import NavigableString
 from argparse import ArgumentParser
+import requests
 import sys,io
 sys.stdout=io.TextIOWrapper(sys.stdout.buffer,encoding='utf8')
 
 def process_command():
-    parser = ArgumentParser()
+    help_text = """ 
+    https://www.ptt.cc/bbs/[BOARD]/index[START].html
+    """
+    parser = ArgumentParser(description=help_text)
     parser.add_argument('--start', '-s', type = int, required = True)
     parser.add_argument('--board', '-b', type = str, required = True)
-    parser.add_argument('--num', '-n', type = int, required= False)
+    parser.add_argument('--num', '-n', type = int, required= False,help = "indicate the number of pages to crawl,1 by default")
     return parser.parse_args()
 
 class Crawler:  
@@ -16,11 +20,32 @@ class Crawler:
     board = ""
     num = 0
     articles = {}
-    gossip_data = {
+    post_data = {
         "from":"bbs/Gossiping/index.html",
         "yes": "yes"
     }
-    comment_data = {}
+    article_data = []
+    """
+    Format:
+    {
+        "article_link" : link,
+        "article_title": title,
+        "author : author,
+        "board" : board,
+        "content" : article,
+        "date" : date,
+        "comment_data" :[
+            {
+
+            "tag" :噓 推,
+            "user_id":id,
+            "user_ip":ip,
+            "datetime" :datetime
+            },
+            ...
+        ]
+    }
+    """
     home = "https://www.ptt.cc/"
 
     def __init__(self,start,board,num):
@@ -28,7 +53,7 @@ class Crawler:
         requests.packages.urllib3.disable_warnings()
         self.session.post("https://www.ptt.cc/ask/over18",
                            verify=False,
-                           data=self.gossip_data)
+                           data=self.post_data)
         self.index = start
         self.board = board
         if num == None:
@@ -52,17 +77,50 @@ class Crawler:
             except:
                 print("error loding link")
 
-    def get_comments(self):
+    def get_content(self):
+       
         for title,link in self.articles.items():
+            result =  {
+            "article_link": link,
+            "article_title": title,
+            "author" : "",
+            "board" : self.board,
+            "content" : "",
+            "date" : "",
+            "comment_data" :[]
+            }
             try:
                 html = self.session.get(link).text
-                print("getting comments of "+link)
-                soup = BeautifulSoup(html,"lxml")
-    
+                print("getting contents of "+link)
+                soup = BeautifulSoup(html,"lxml")               
+                for tag in soup.select("#main-content")[0]:
+                    if type(tag) == NavigableString:
+                        result["content"] = tag.strip()
+                result["author"] = soup.find_all("span",class_ ="article-meta-value" )[0].text
+                result["date"]  = soup.find_all("span",class_ ="article-meta-value" )[-1].text
+                print(result)
+               
                 for element in soup.find_all("div",class_ = "push"):
-                    user_id = element.find("span",class_ = "f3 hl push-userid").text.strip()
+                    try:
+                        tag = element.find("span",class_ = "f1 hl push-tag").text.strip()
+                    except:
+                        tag = element.find("span",class_ = "hl push-tag").text.strip()
+                    user_id = element.find("span",class_ = "f3 hl push-userid").text.strip()              
                     comment = element.find("span",class_="f3 push-content").text.strip()[2:]
-                    self.comment_data[user_id] = comment
+                    _ipdatetime = element.find("span",class_="push-ipdatetime").text.split()
+                    ip = _ipdatetime[0]
+                    datetime = _ipdatetime[1]+_ipdatetime[2]
+                    #remove the ':' in the beginning 
+                    
+                    
+                    result["comment_data"].append(
+                        {   
+                            "tag":tag,
+                            "user_id":user_id,
+                            "ip":ip,
+                            "datetime":datetime}
+                    )                        
+                    self.article_data.append(result)               
             except:
                 print("error loding article")
             
@@ -71,10 +129,11 @@ class Crawler:
         for i in range(self.num):            
             self.get_articles()
             self.index -= 1
-            self.get_comments()
+            self.get_content()
 
 
 args = process_command()
-crawler = Crawler(args.start, args.board,args.num )
+crawler = Crawler(args.start, args.board, args.num)
 crawler.crawl()
-print(crawler.comment_data)
+print(crawler.article_data)
+
