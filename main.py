@@ -48,19 +48,33 @@ class Crawler:
                 title = item.find("div",class_ = "title").text.strip()
                 href = item.find("div",class_ = "title").a['href']
                 self.articles[title]=self.home+href
-                print(title,href)
+                #print(title,href)
             except:
                 print("error loding link")
 
     def get_comments(self):
-        pass
+        for title,link in self.articles.items():
+            try:
+                html = self.session.get(link).text
+                print("getting comments of "+link)
+                soup = BeautifulSoup(html,"lxml")
+    
+                for element in soup.find_all("div",class_ = "push"):
+                    user_id = element.find("span",class_ = "f3 hl push-userid").text.strip()
+                    comment = element.find("span",class_="f3 push-content").text.strip()[2:]
+                    self.comment_data[user_id] = comment
+            except:
+                print("error loding article")
+            
 
     def crawl(self):
         for i in range(self.num):            
             self.get_articles()
             self.index -= 1
+            self.get_comments()
+
 
 args = process_command()
 crawler = Crawler(args.start, args.board,args.num )
 crawler.crawl()
-
+print(crawler.comment_data)
