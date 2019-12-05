@@ -146,7 +146,7 @@ class Crawler:
 args = process_command()
 crawler = Crawler(args.start, args.board, args.num)
 crawler.crawl()
-print(crawler.article_data)
+
 
 output_json = json.dumps(crawler.article_data)
 file_name = crawler.board+".json"
