@@ -37,7 +37,6 @@ class Crawler:
         "date" : date,
         "comment_data" :[
             {
-
             "tag" :噓 推,
             "user_id":id,
             "user_ip":ip,
@@ -93,14 +92,20 @@ class Crawler:
             try:
                 html = self.session.get(link).text
                 print("getting contents of "+link)
-                soup = BeautifulSoup(html,"lxml")               
+                soup = BeautifulSoup(html,"lxml")     
+         
                 for tag in soup.select("#main-content")[0]:
-                    if type(tag) == NavigableString:
+
+                    if type(tag) == NavigableString and tag != "\n":
                         result["content"] = tag.strip()
+                        
+                        break
+                
                 result["author"] = soup.find_all("span",class_ ="article-meta-value" )[0].text
                 result["date"]  = soup.find_all("span",class_ ="article-meta-value" )[-1].text
                
                 for element in soup.find_all("div",class_ = "push"):
+                    
                     try:
                         tag = element.find("span",class_ = "f1 hl push-tag").text.strip()
                     except:
@@ -108,10 +113,15 @@ class Crawler:
                     user_id = element.find("span",class_ = "f3 hl push-userid").text.strip()              
                     comment = element.find("span",class_="f3 push-content").text.strip()[2:]
                     _ipdatetime = element.find("span",class_="push-ipdatetime").text.split()
-                    ip = _ipdatetime[0]
-                    datetime = _ipdatetime[1]+_ipdatetime[2]
-                    #remove the ':' in the beginning 
                     
+                    if len(_ipdatetime) == 3:
+                        ip = _ipdatetime[0]
+                        datetime = _ipdatetime[1]+_ipdatetime[2]
+                    else:
+                        ip = ""
+                        datetime = _ipdatetime[0] +_ipdatetime[1]
+                    #remove the ':' in the beginning 
+
                     
                     result["comment_data"].append(
                         {   
@@ -120,7 +130,8 @@ class Crawler:
                             "ip":ip,
                             "datetime":datetime}
                     )                        
-                self.article_data.append(result)                   
+                self.article_data.append(result)     
+                             
             except:
                 print("error loding article")
             
