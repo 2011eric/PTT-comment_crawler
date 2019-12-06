@@ -40,6 +40,7 @@ class Crawler:
             "tag" :噓 推,
             "user_id":id,
             "user_ip":ip,
+            "text:text
             "datetime" :datetime
             },
             ...
@@ -127,6 +128,7 @@ class Crawler:
                         {   
                             "tag":tag,
                             "user_id":user_id,
+                            "text" :comment
                             "ip":ip,
                             "datetime":datetime}
                     )                        
@@ -159,8 +161,7 @@ if os.path.isfile(file_name):
     output = json_original.strip()[:-1]+","
     output += output_json[1:]
     fp = open(file_name,"w")
-    fp.write(output)
-    
+    fp.write(output)    
 else:
     fp = open(file_name,"w")
     fp.write(output_json)
