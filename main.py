@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 from argparse import ArgumentParser
+from progress.bar import IncrementalBar
 import json
 import requests
 import sys,io,os
@@ -57,10 +58,7 @@ class Crawler:
                            data=self.post_data)
         self.index = start
         self.board = board
-        if num == None:
-            self.num = 1
-        else:
-            self.num = num
+        self.num = num
 
     def get_articles(self):
         link = "https://www.ptt.cc/bbs/{board}/index{start}.html".format(board = self.board , start = self.index )
@@ -74,9 +72,9 @@ class Crawler:
                 title = item.find("div",class_ = "title").text.strip()
                 href = item.find("div",class_ = "title").a['href']
                 self.articles[title]=self.home+href
-                #print(title,href)
             except:
                 print("error loding link")
+        
 
     def get_content(self):
        
@@ -92,7 +90,7 @@ class Crawler:
             }
             try:
                 html = self.session.get(link).text
-                print("getting contents of "+link)
+                #print("getting contents of "+link)
                 soup = BeautifulSoup(html,"lxml")     
          
                 for tag in soup.select("#main-content")[0]:
@@ -117,10 +115,10 @@ class Crawler:
                     
                     if len(_ipdatetime) == 3:
                         ip = _ipdatetime[0]
-                        datetime = _ipdatetime[1]+_ipdatetime[2]
+                        datetime = _ipdatetime[1]+" "+_ipdatetime[2]
                     else:
                         ip = ""
-                        datetime = _ipdatetime[0] +_ipdatetime[1]
+                        datetime = _ipdatetime[0] +" "+_ipdatetime[1]
                     #remove the ':' in the beginning 
 
                     
@@ -128,30 +126,39 @@ class Crawler:
                         {   
                             "tag":tag,
                             "user_id":user_id,
-                            "text" :comment
+                            "text" :comment,
                             "ip":ip,
                             "datetime":datetime}
                     )                        
                 self.article_data.append(result)     
                              
             except:
-                print("error loding article")
+                pass
+                #print("error loding article")
             
 
     def crawl(self):
+        bar = IncrementalBar('Downloading', max=self.num)
         for i in range(self.num):            
             self.get_articles()
-            self.index -= 1
             self.get_content()
+            self.index -= 1
+            self.articles={}
+            bar.next()
+        bar.finish()
+   
 
 
 args = process_command()
+if args.num == None:
+    args.num = 1
 crawler = Crawler(args.start, args.board, args.num)
 crawler.crawl()
 
 
 output_json = json.dumps(crawler.article_data)
-file_name = crawler.board+".json"
+End =args.start - args.num + 1
+file_name = crawler.board+("{start}-{end}.json".format(start = args.start ,end = End ))
 if os.path.isfile(file_name):
     print("exist")
     fp = open(file_name,"r")
@@ -161,7 +168,9 @@ if os.path.isfile(file_name):
     output = json_original.strip()[:-1]+","
     output += output_json[1:]
     fp = open(file_name,"w")
-    fp.write(output)    
+    fp.write(output)  
+    fp.close()  
 else:
     fp = open(file_name,"w")
     fp.write(output_json)
+    fp.close()
